@@ -36,52 +36,59 @@ class Category:
         for obj in self.ledger:
             desc = obj["description"][:23]
             desc = f"{desc: <23}"
-            amount = obj["amount"]
-            amount = f"{amount:>7.2f}"
+            amount = "{:>7.2f}".format(obj["amount"]) 
             res.append(f"{desc}{amount}")
-        res.append(f"Total: {self.get_balance():.02f}")
+
+        res.append(f"Total: {self.get_balance():.2f}")
 
         return "\n".join(res)
 
-
-
-
-
-
+    
+    def get_deposits(self) -> float:
+        res = 0
+        for obj in self.ledger:
+            if (y := obj["amount"]) > 0:
+                res += y
+        return res
+    def get_withdrawals(self) -> float:
+        res = 0
+        for obj in self.ledger:
+            if (y := obj["amount"]) < 0:
+                res += y
+        return res
 
 def create_spend_chart(categories):
-    
-    chart = ["Percentage spent by category"]
-    
-    withdrawals = []
-    categories = sorted(categories, key=lambda category: sum(obj["amount"] for obj in 
-                                                             category.ledger if obj["amount"] < 0)    )
-    for category in categories:
-        money_spent = sum(obj["amount"] for obj in category.ledger if obj["amount"] < 0)
-        withdrawals.append(money_spent)
-    total = sum(withdrawals)
+    chart = "Percentage spent by category\n"
+    spendings = [category.get_withdrawals() for category in categories]
+    total_spent = sum(spendings)
+    percentages = [int((spent / total_spent) * 100) // 10 * 10 for spent in spendings]
+    #print(f"{percentages = }")
 
-    for percentage in range(100, -1, -10):
-        line = f"{percentage:3}| "
-        for withdrawal in withdrawals:
-            bar = "o" if withdrawal <= (percentage / 100 * total) else " "
-            line += f"{bar:<3}"
-        chart.append(line)
+    for i in range(100, -1, -10):
+        chart += f"{i:>3}| "
+        for percentage in percentages:
+            chart += "o" if percentage >= i else " "
+            chart += "  "
+        chart += "\n"
 
-    chart.append("    -" + "---" * len(categories))
+    chart += "    -" + "---" * len(categories) + "\n"
 
     max_name_length = max(len(category.name) for category in categories)
-
     for i in range(max_name_length):
-        line = "     "
+        chart += "     "
         for category in categories:
-            if i < len(category.name):
-                line += f"{category.name[i]}  "
-            else:
-                line += "   "
-        chart.append(line)
+            chart += category.name[i] if i < len(category.name) else " "
+            chart += "  "
+        if i < max_name_length - 1:
+            chart += "\n"
 
-    return "\n".join(chart)
+    with open("chart.txt", "w") as f:
+        f.write(chart)
+    return chart
+
+
+    
+    
 
 
 if __name__ == "__main__":
@@ -99,6 +106,8 @@ if __name__ == "__main__":
     auto.withdraw(15)
 
     print(food)
+    print()
     print(clothing)
+    print()
 
     print(create_spend_chart([food, clothing, auto]))
